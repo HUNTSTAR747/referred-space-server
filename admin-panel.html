@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Referred.space - Admin Panel</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      padding: 40px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    
+    h1 {
+      color: #1a202c;
+      margin-bottom: 10px;
+      font-size: 32px;
+    }
+    
+    .subtitle {
+      color: #718096;
+      margin-bottom: 40px;
+      font-size: 16px;
+    }
+    
+    .form-group {
+      margin-bottom: 24px;
+    }
+    
+    label {
+      display: block;
+      color: #2d3748;
+      font-weight: 600;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    
+    input, textarea {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 15px;
+      transition: border-color 0.2s;
+      font-family: inherit;
+    }
+    
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    
+    textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+    
+    .help-text {
+      font-size: 13px;
+      color: #718096;
+      margin-top: 6px;
+    }
+    
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 14px 32px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      width: 100%;
+    }
+    
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+    }
+    
+    button:active {
+      transform: translateY(0);
+    }
+    
+    .result {
+      margin-top: 24px;
+      padding: 16px;
+      border-radius: 8px;
+      display: none;
+    }
+    
+    .result.success {
+      background: #f0fdf4;
+      border: 2px solid #86efac;
+      color: #166534;
+      display: block;
+    }
+    
+    .result.error {
+      background: #fef2f2;
+      border: 2px solid #fca5a5;
+      color: #991b1b;
+      display: block;
+    }
+    
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 32px;
+      border-bottom: 2px solid #e2e8f0;
+    }
+    
+    .tab {
+      padding: 12px 24px;
+      background: none;
+      border: none;
+      color: #718096;
+      cursor: pointer;
+      font-weight: 600;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+      width: auto;
+    }
+    
+    .tab.active {
+      color: #667eea;
+      border-bottom-color: #667eea;
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    .code-list {
+      margin-top: 32px;
+    }
+    
+    .code-item {
+      background: #f7fafc;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .code-name {
+      font-weight: 600;
+      color: #2d3748;
+      font-size: 18px;
+    }
+    
+    .code-meta {
+      font-size: 13px;
+      color: #718096;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎯 Referred.space Admin</h1>
+    <p class="subtitle">Manage discount codes and stores</p>
+    
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('add')">Add Codes</button>
+      <button class="tab" onclick="switchTab('view')">View All</button>
+    </div>
+    
+    <!-- ADD CODES TAB -->
+    <div id="add-tab" class="tab-content active">
+      <form id="codeForm">
+        <div class="form-group">
+          <label for="domain">Store Domain</label>
+          <input 
+            type="text" 
+            id="domain" 
+            placeholder="e.g., gymshark.com"
+            required
+          >
+          <p class="help-text">Enter the domain without https:// or www.</p>
+        </div>
+        
+        <div class="form-group">
+          <label for="codes">Discount Codes</label>
+          <textarea 
+            id="codes" 
+            placeholder="CREATOR10&#10;JASMINE15&#10;SAVE20"
+            required
+          ></textarea>
+          <p class="help-text">One code per line</p>
+        </div>
+        
+        <div class="form-group">
+          <label for="creators">Creator Handles (Optional)</label>
+          <input 
+            type="text" 
+            id="creators" 
+            placeholder="@alex, @jasmine, @mike"
+          >
+          <p class="help-text">Comma-separated Instagram handles</p>
+        </div>
+        
+        <button type="submit">Add Codes to Database</button>
+        
+        <div id="result" class="result"></div>
+      </form>
+    </div>
+    
+    <!-- VIEW ALL TAB -->
+    <div id="view-tab" class="tab-content">
+      <button onclick="loadAllCodes()" style="margin-bottom: 20px; width: auto; padding: 10px 20px;">
+        🔄 Refresh List
+      </button>
+      <div id="codeList" class="code-list"></div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = 'https://referred.space'; // Change this to your deployed URL
+    
+    function switchTab(tab) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      
+      event.target.classList.add('active');
+      document.getElementById(`${tab}-tab`).classList.add('active');
+    }
+    
+    document.getElementById('codeForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const domain = document.getElementById('domain').value.trim();
+      const codesText = document.getElementById('codes').value.trim();
+      const creatorsText = document.getElementById('creators').value.trim();
+      
+      const codes = codesText.split('\n').map(c => c.trim()).filter(c => c);
+      
+      const creators = creatorsText
+        ? creatorsText.split(',').map(c => ({
+            handle: c.trim().replace('@', ''),
+            id: Math.random().toString(36).substr(2, 9)
+          }))
+        : [];
+      
+      const resultDiv = document.getElementById('result');
+      resultDiv.textContent = 'Saving...';
+      resultDiv.className = 'result';
+      resultDiv.style.display = 'block';
+      
+      try {
+        const response = await fetch(`${API_URL}/admin/store-codes`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ domain, codes, creators })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          resultDiv.className = 'result success';
+          resultDiv.textContent = `✅ Success! Added ${codes.length} code(s) for ${domain}`;
+          document.getElementById('codeForm').reset();
+        } else {
+          resultDiv.className = 'result error';
+          resultDiv.textContent = `❌ Error: ${data.error}`;
+        }
+      } catch (error) {
+        resultDiv.className = 'result error';
+        resultDiv.textContent = `❌ Network error: ${error.message}`;
+      }
+    });
+    
+    async function loadAllCodes() {
+      const listDiv = document.getElementById('codeList');
+      listDiv.innerHTML = '<p style="color: #718096;">Loading...</p>';
+      
+      try {
+        // This would need a new endpoint in your server
+        // For now, showing placeholder
+        listDiv.innerHTML = `
+          <p style="color: #718096; text-align: center; padding: 40px;">
+            Coming soon! This will show all stores and their codes.
+            <br><br>
+            Add the <code>/admin/list-codes</code> endpoint to your server.
+          </p>
+        `;
+      } catch (error) {
+        listDiv.innerHTML = `<p style="color: #e53e3e;">Error loading codes</p>`;
+      }
+    }
+  </script>
+</body>
+</html>
