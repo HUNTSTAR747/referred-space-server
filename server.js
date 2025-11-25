@@ -36,20 +36,62 @@ const supabase = createClient(
   }
 })();
 
-// Middleware
+// Middleware - CORS configuration
+const allowedOrigins = process.env.ALLOWED_ORIGIN 
+  ? process.env.ALLOWED_ORIGIN.split(',').map(origin => origin.trim())
+  : ['*'];
+
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGIN || '*',
-  credentials: true
-}));
-app.use(express.json());
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'default-secret',
-  resave: false,
-  saveUninitialized: false,
-  cookie: { secure: process.env.NODE_ENV === 'production' }
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Allow all origins if * is set
+    if (allowedOrigins.includes('*')) return callback(null, true);
+    
+    // Check if origin is in allowed list
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('❌ CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Admin-Key'],
+  exposedHeaders: ['Content-Type', 'Authorization']
 }));
 
-console.log('✅ Middleware configured');
+// Handle preflight requests
+app.options('*', cors());
+
+// ==========================================
+// ADMIN AUTHENTICATION MIDDLEWARE
+// ==========================================
+
+function authenticateAdmin(req, res, next) {
+  const authHeader = req.headers.authorization;
+  const adminKey = req.headers['x-admin-key'];
+  
+  // Get your admin key from environment variable
+  const ADMIN_KEY = process.env.ADMIN_KEY;
+  
+  if (!ADMIN_KEY) {
+    console.error('❌ ADMIN_KEY not set in environment variables');
+    return res.status(500).json({ error: 'Server configuration error' });
+  }
+  
+  const providedKey = authHeader?.replace('Bearer ', '') || adminKey;
+  
+  if (providedKey === ADMIN_KEY) {
+    console.log('✅ Admin authenticated');
+    next();
+  } else {
+    console.log('❌ Unauthorized admin access attempt');
+    res.status(401).json({ error: 'Unauthorized' });
+  }
+}
 
 // ==========================================
 // AUTH ROUTES - Email/Password
@@ -157,10 +199,10 @@ app.get('/oauth/success', (req, res) => {
 });
 
 // ==========================================
-// ADMIN ROUTES
+// ADMIN ROUTES (PROTECTED)
 // ==========================================
 
-app.post('/admin/store-codes', async (req, res) => {
+app.post('/admin/store-codes', authenticateAdmin, async (req, res) => {
   console.log('📝 Received store-codes request:', req.body);
   const { domain, codes, creators } = req.body;
 
@@ -223,6 +265,41 @@ app.post('/admin/store-codes', async (req, res) => {
     res.json({ success: true, store, message: 'Codes added successfully' });
   } catch (error) {
     console.error('❌ Error storing codes:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/admin/store-codes', authenticateAdmin, async (req, res) => {
+  console.log('📋 Fetching all stores and codes');
+  
+  try {
+    const { data: stores, error } = await supabase
+      .from('stores')
+      .select(`
+        id,
+        domain,
+        created_at,
+        updated_at,
+        discount_codes (
+          code,
+          is_verified,
+          success_count
+        )
+      `)
+      .order('updated_at', { ascending: false });
+
+    if (error) throw error;
+
+    const formattedStores = stores.map(store => ({
+      id: store.id,
+      domain: store.domain,
+      codes: store.discount_codes,
+      updated_at: store.updated_at
+    }));
+
+    res.json({ stores: formattedStores });
+  } catch (error) {
+    console.error('❌ Error fetching stores:', error);
     res.status(500).json({ error: error.message });
   }
 });
