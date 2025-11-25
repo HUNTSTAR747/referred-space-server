@@ -37,17 +37,16 @@ const supabase = createClient(
 })();
 
 // Middleware - CORS configuration
-const allowedOrigins = process.env.ALLOWED_ORIGIN 
-  ? process.env.ALLOWED_ORIGIN.split(',').map(origin => origin.trim())
-  : ['*'];
+const allowedOrigins = [
+  'http://127.0.0.1:5500',
+  'http://localhost:5500',
+  'https://referred-space-server-jm8y5zmao-hunters-projects-07dd0a5c.vercel.app'
+];
 
 app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    
-    // Allow all origins if * is set
-    if (allowedOrigins.includes('*')) return callback(null, true);
     
     // Check if origin is in allowed list
     if (allowedOrigins.indexOf(origin) !== -1) {
